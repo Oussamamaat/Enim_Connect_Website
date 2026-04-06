@@ -2,6 +2,12 @@
 @plugin "@tailwindcss/forms";
 @plugin "@tailwindcss/container-queries";
 
+@variant dark (&.dark);
+
+:root {
+  color-scheme: light;
+}
+
 @theme {
   --color-secondary-fixed-dim: #93c5fd;
   --color-on-primary-container: #eff6ff;
