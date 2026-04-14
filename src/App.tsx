@@ -1,21 +1,63 @@
-import SideNavBar from "./components/SideNavBar";
-import TopNavBar from "./components/TopNavBar";
-import OfferList from "./components/OfferList";
-import CandidateList from "./components/CandidateList";
-import CandidateDetail from "./components/CandidateDetail";
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+
+// Layouts
+import StudentLayout from './components/layout/StudentLayout';
+import CompanyLayout from './components/layout/CompanyLayout';
+import AdminLayout from './components/layout/AdminLayout';
+
+// Auth
+import LoginPage from './pages/auth/LoginPage';
+
+// Student Pages
+import DashboardEtudiant from './pages/student/DashboardEtudiant';
+import RechercheStages from './pages/student/RechercheStages';
+import MesCandidatures from './pages/student/MesCandidatures';
+import ProfilCandidat from './pages/student/ProfilCandidat';
+import DetailsOffre from './pages/student/DetailsOffre';
+
+// Company Pages
+import DashboardEntreprise from './pages/company/DashboardEntreprise';
+import PublierOffre from './pages/company/PublierOffre';
+import CandidatsFavoris from './pages/company/CandidatsFavoris';
+import GestionCandidats from './pages/company/GestionCandidats';
+
+// Admin Pages
+import InterfaceAdministration from './pages/admin/InterfaceAdministration';
 
 export default function App() {
   return (
-    <div className="bg-surface font-body text-on-surface antialiased flex h-screen overflow-hidden">
-      <SideNavBar />
-      <main className="flex-1 ml-64 flex flex-col">
-        <TopNavBar />
-        <div className="flex flex-1 overflow-hidden">
-          <OfferList />
-          <CandidateList />
-          <CandidateDetail />
-        </div>
-      </main>
+    <div className="bg-surface font-body text-on-surface antialiased flex flex-col min-h-screen">
+      <BrowserRouter>
+        <Routes>
+          {/* Auth Route */}
+          <Route path="/" element={<LoginPage />} />
+          
+          {/* Student Routes */}
+          <Route path="/etudiant" element={<StudentLayout />}>
+            <Route path="tableau-de-bord" element={<DashboardEtudiant />} />
+            <Route path="recherche" element={<RechercheStages />} />
+            <Route path="candidatures" element={<MesCandidatures />} />
+            <Route path="profil/:id" element={<ProfilCandidat />} />
+            <Route path="offre/:id" element={<DetailsOffre />} />
+            <Route index element={<Navigate to="tableau-de-bord" replace />} />
+          </Route>
+
+          {/* Company Routes */}
+          <Route path="/entreprise" element={<CompanyLayout />}>
+            <Route path="tableau-de-bord" element={<DashboardEntreprise />} />
+            <Route path="publier-offre" element={<PublierOffre />} />
+            <Route path="candidats-favoris" element={<CandidatsFavoris />} />
+            <Route path="gestion-candidats" element={<GestionCandidats />} />
+            <Route index element={<Navigate to="tableau-de-bord" replace />} />
+          </Route>
+
+          {/* Admin Routes */}
+          <Route path="/admin" element={<AdminLayout />}>
+            <Route path="interface" element={<InterfaceAdministration />} />
+            <Route index element={<Navigate to="interface" replace />} />
+          </Route>
+        </Routes>
+      </BrowserRouter>
     </div>
   );
 }

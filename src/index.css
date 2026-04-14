@@ -8,6 +8,10 @@
   color-scheme: light;
 }
 
+html, body {
+  min-height: 100svh;
+}
+
 @theme {
   --color-secondary-fixed-dim: #93c5fd;
   --color-on-primary-container: #eff6ff;
@@ -85,3 +89,25 @@
   background: #c7c4d7;
   border-radius: 10px;
 }
+
+.glass-card {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(199, 196, 215, 0.2);
+}
+
+.ai-gradient-text {
+  background: linear-gradient(135deg, var(--color-primary), var(--color-secondary));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.btn-primary {
+  @apply bg-gradient-to-r from-primary to-secondary text-white font-semibold px-6 py-3 rounded-xl hover:opacity-90 transition-opacity flex items-center gap-2;
+}
+
+.btn-ghost {
+  @apply border border-outline-variant text-on-surface-variant font-semibold px-6 py-3 rounded-xl hover:bg-surface-container transition-colors flex items-center gap-2;
+}
+
