@@ -1,224 +1,271 @@
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { api } from '../../api/client';
+
+interface Profil {
+  id: string; nom: string; prenom: string; email?: string;
+  telephone?: string; photo_url?: string; filiere?: string;
+  departement?: string; niveau?: string;
+  competences: string[]; langues: string[];
+}
+interface CV { id: string; fichier_url: string; description_ia?: string; uploaded_at: string; }
+
+const NIVEAUX = ['1A', '2A', '3A'];
+const DEPARTEMENTS = ['Génie Informatique', 'Génie Électrique', 'Génie Civil', 'Génie Industriel', 'Génie Minier', 'Sciences de Base'];
 
 export default function ProfilCandidat() {
   const navigate = useNavigate();
+  const photoRef = useRef<HTMLInputElement>(null);
+  const cvRef = useRef<HTMLInputElement>(null);
+
+  const [profil, setProfil] = useState<Profil | null>(null);
+  const [cv, setCv] = useState<CV | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [uploadingCv, setUploadingCv] = useState(false);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [success, setSuccess] = useState('');
+  const [error, setError] = useState('');
+
+  // Form state
+  const [nom, setNom] = useState('');
+  const [prenom, setPrenom] = useState('');
+  const [telephone, setTelephone] = useState('');
+  const [filiere, setFiliere] = useState('');
+  const [departement, setDepartement] = useState('');
+  const [niveau, setNiveau] = useState('');
+  const [competencesStr, setCompetencesStr] = useState('');
+  const [languesStr, setLanguesStr] = useState('');
+
+  useEffect(() => {
+    Promise.all([
+      api.getMonProfil() as Promise<Profil>,
+      api.getMonCV().catch(() => null) as Promise<CV | null>,
+    ]).then(([p, c]) => {
+      setProfil(p); setCv(c);
+      setNom(p.nom); setPrenom(p.prenom);
+      setTelephone(p.telephone ?? '');
+      setFiliere(p.filiere ?? '');
+      setDepartement(p.departement ?? '');
+      setNiveau(p.niveau ?? '');
+      setCompetencesStr((p.competences ?? []).join(', '));
+      setLanguesStr((p.langues ?? []).join(', '));
+    }).catch(console.error).finally(() => setLoading(false));
+  }, []);
+
+  async function handleSave(e: React.FormEvent) {
+    e.preventDefault();
+    setSaving(true); setError(''); setSuccess('');
+    try {
+      const body: Record<string, unknown> = { nom, prenom };
+      if (telephone) body.telephone = telephone;
+      if (filiere) body.filiere = filiere;
+      if (departement) body.departement = departement;
+      if (niveau) body.niveau = niveau;
+      body.competences = competencesStr.split(',').map((s) => s.trim()).filter(Boolean);
+      body.langues = languesStr.split(',').map((s) => s.trim()).filter(Boolean);
+      const updated = await api.updateMonProfil(body) as Profil;
+      setProfil(updated);
+      setSuccess('Profil mis à jour avec succès');
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'Erreur');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handlePhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]; if (!file) return;
+    setUploadingPhoto(true);
+    try {
+      const res = await api.uploadPhoto(file) as { photo_url: string };
+      setProfil((p) => p ? { ...p, photo_url: res.photo_url } : p);
+      setSuccess('Photo mise à jour');
+    } catch (e: unknown) { setError(e instanceof Error ? e.message : 'Erreur'); }
+    finally { setUploadingPhoto(false); }
+  }
+
+  async function handleCvChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]; if (!file) return;
+    setUploadingCv(true); setSuccess(''); setError('');
+    try {
+      await api.uploadCV(file);
+      setSuccess('CV uploadé ! L\'analyse IA est en cours en arrière-plan (quelques secondes).');
+      setTimeout(async () => {
+        const newCv = await api.getMonCV().catch(() => null) as CV | null;
+        if (newCv) setCv(newCv);
+      }, 5000);
+    } catch (e: unknown) { setError(e instanceof Error ? e.message : 'Erreur'); }
+    finally { setUploadingCv(false); }
+  }
+
+  const initiales = profil ? `${profil.prenom?.[0] ?? ''}${profil.nom?.[0] ?? ''}`.toUpperCase() : '?';
+
+  if (loading) return (
+    <div className="flex items-center justify-center min-h-screen text-on-surface-variant">
+      <span className="material-symbols-outlined animate-spin text-3xl">progress_activity</span>
+    </div>
+  );
 
   return (
-    <div className="p-8 max-w-7xl mx-auto w-full">
-      {/* Back navigation */}
-      <button
-        onClick={() => navigate(-1)}
-        className="flex items-center gap-2 text-sm text-on-surface-variant hover:text-on-surface transition-colors mb-6"
-      >
-        <span className="material-symbols-outlined text-xl">arrow_back</span>
-        Retour
+    <div className="p-8 max-w-5xl mx-auto">
+      <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-sm text-on-surface-variant hover:text-on-surface mb-6">
+        <span className="material-symbols-outlined text-xl">arrow_back</span>Retour
       </button>
 
-      {/* 12-column grid */}
-      <div className="grid grid-cols-12 gap-6">
-        {/* Left: Profile summary + AI panel — 4 cols */}
-        <div className="col-span-4 space-y-5">
-          {/* Profile Card */}
-          <div className="bg-surface-container-low rounded-2xl border border-outline-variant overflow-hidden">
-            {/* Banner */}
-            <div className="h-20 bg-gradient-to-r from-primary to-secondary"></div>
-            <div className="px-6 pb-6">
-              {/* Avatar */}
-              <div className="flex items-end justify-between -mt-8 mb-4">
-                <div className="w-16 h-16 rounded-2xl bg-white border-4 border-white shadow-md flex items-center justify-center bg-gradient-to-br from-primary to-secondary">
-                  <span className="text-white font-bold text-xl">L</span>
-                </div>
-                <button className="px-3 py-1.5 border border-outline-variant rounded-xl text-xs font-medium text-on-surface-variant hover:bg-surface-container transition-colors">
-                  Modifier
-                </button>
-              </div>
-              <h2 className="font-headline font-bold text-xl text-on-surface mb-0.5">Lucas Martin</h2>
-              <p className="text-sm text-on-surface-variant mb-1">Étudiant ingénieur — ENIM, Meknès</p>
-              <p className="text-sm text-on-surface-variant mb-4">Spécialisation : Intelligence Artificielle</p>
+      <h1 className="font-headline font-extrabold text-3xl text-on-surface mb-6">Mon profil</h1>
 
-              <div className="space-y-2 text-sm">
-                <div className="flex items-center gap-2 text-on-surface-variant">
-                  <span className="material-symbols-outlined text-base">location_on</span>
-                  Meknès, Maroc
-                </div>
-                <div className="flex items-center gap-2 text-on-surface-variant">
-                  <span className="material-symbols-outlined text-base">mail</span>
-                  lucas.martin@enim.ac.ma
-                </div>
-                <div className="flex items-center gap-2 text-on-surface-variant">
-                  <span className="material-symbols-outlined text-base">school</span>
-                  3ème année ingénierie
-                </div>
-              </div>
+      {success && <div className="mb-4 p-4 bg-green-50 border border-green-200 text-green-700 rounded-xl text-sm">{success}</div>}
+      {error && <div className="mb-4 p-4 bg-red-50 border border-red-200 text-red-700 rounded-xl text-sm">{error}</div>}
 
-              <div className="mt-4 pt-4 border-t border-outline-variant">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs font-semibold text-on-surface-variant">Complétion du profil</span>
-                  <span className="text-xs font-bold text-primary">82%</span>
+      <div className="grid grid-cols-3 gap-6">
+        {/* Left */}
+        <div className="space-y-4">
+          {/* Photo + identity */}
+          <div className="bg-surface-container-low rounded-2xl border border-outline-variant p-6 text-center">
+            <div className="relative inline-block mb-4">
+              {profil?.photo_url ? (
+                <img src={`${api.apiBase}${profil.photo_url}`} className="w-24 h-24 rounded-2xl object-cover mx-auto" alt="" />
+              ) : (
+                <div className="w-24 h-24 rounded-2xl bg-gradient-to-br from-primary to-secondary flex items-center justify-center text-white text-2xl font-bold mx-auto">
+                  {initiales}
                 </div>
-                <div className="h-2 bg-surface-container rounded-full overflow-hidden">
-                  <div className="h-full w-4/5 bg-gradient-to-r from-primary to-secondary rounded-full"></div>
-                </div>
-              </div>
-
-              <div className="mt-4 flex gap-2">
-                <button className="flex-1 py-2 bg-gradient-to-r from-primary to-secondary text-white text-sm font-semibold rounded-xl hover:opacity-90 transition-opacity">
-                  Contacter
-                </button>
-                <button className="w-10 h-9 border border-outline-variant rounded-xl flex items-center justify-center hover:bg-surface-container transition-colors">
-                  <span className="material-symbols-outlined text-on-surface-variant text-xl">bookmark_border</span>
-                </button>
-              </div>
+              )}
+              <button onClick={() => photoRef.current?.click()}
+                disabled={uploadingPhoto}
+                className="absolute -bottom-2 -right-2 w-8 h-8 bg-primary rounded-full flex items-center justify-center text-white shadow-md hover:opacity-90">
+                <span className="material-symbols-outlined text-sm">{uploadingPhoto ? 'progress_activity' : 'camera_alt'}</span>
+              </button>
+              <input ref={photoRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoChange} />
             </div>
+            <div className="font-headline font-bold text-lg text-on-surface">{profil?.prenom} {profil?.nom}</div>
+            <div className="text-sm text-on-surface-variant mt-0.5">{profil?.email}</div>
+            {profil?.filiere && <div className="text-xs text-on-surface-variant mt-1">{profil.filiere}{profil.niveau ? ` · ${profil.niveau}` : ''}</div>}
           </div>
 
-          {/* AI Match Panel */}
-          <div className="bg-gradient-to-br from-primary/5 to-secondary/5 rounded-2xl border border-primary/10 p-5">
-            <div className="flex items-center gap-2 mb-4">
-              <span className="material-symbols-outlined text-primary text-xl" style={{ fontVariationSettings: "'FILL' 1" }}>auto_awesome</span>
-              <h3 className="font-semibold text-primary">Analyse IA</h3>
-            </div>
-            <div className="text-center mb-4">
-              <div className="text-4xl font-extrabold ai-gradient-text font-headline">94%</div>
-              <div className="text-xs text-on-surface-variant mt-1">Score de compatibilité</div>
-            </div>
-            <div className="space-y-2.5">
-              <div>
-                <div className="flex justify-between text-xs mb-1">
-                  <span className="text-on-surface-variant">Compétences techniques</span>
-                  <span className="font-semibold text-on-surface">92%</span>
+          {/* CV */}
+          <div className="bg-surface-container-low rounded-2xl border border-outline-variant p-5">
+            <h3 className="font-semibold text-on-surface mb-3 flex items-center gap-2">
+              <span className="material-symbols-outlined text-primary text-lg">description</span>
+              Mon CV
+            </h3>
+            {cv ? (
+              <div className="space-y-3">
+                <div className="p-3 bg-green-50 border border-green-200 rounded-xl">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="material-symbols-outlined text-green-600 text-base" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
+                    <span className="text-xs font-semibold text-green-700">CV chargé</span>
+                  </div>
+                  <div className="text-xs text-green-600">Uploadé le {new Date(cv.uploaded_at).toLocaleDateString('fr-FR')}</div>
                 </div>
-                <div className="h-1.5 bg-white/60 rounded-full overflow-hidden">
-                  <div className="h-full w-11/12 bg-gradient-to-r from-primary to-secondary rounded-full"></div>
-                </div>
+                {cv.description_ia && (
+                  <div className="p-3 bg-primary/5 border border-primary/10 rounded-xl">
+                    <div className="flex items-center gap-1.5 mb-1.5">
+                      <span className="material-symbols-outlined text-primary text-sm">auto_awesome</span>
+                      <span className="text-xs font-semibold text-primary">Analyse IA</span>
+                    </div>
+                    <p className="text-xs text-on-surface-variant leading-relaxed">{cv.description_ia}</p>
+                  </div>
+                )}
               </div>
-              <div>
-                <div className="flex justify-between text-xs mb-1">
-                  <span className="text-on-surface-variant">Soft skills</span>
-                  <span className="font-semibold text-on-surface">88%</span>
-                </div>
-                <div className="h-1.5 bg-white/60 rounded-full overflow-hidden">
-                  <div className="h-full w-10/12 bg-gradient-to-r from-primary to-secondary rounded-full"></div>
-                </div>
+            ) : (
+              <div className="text-center py-4">
+                <span className="material-symbols-outlined text-4xl text-on-surface-variant mb-2 block">upload_file</span>
+                <p className="text-xs text-on-surface-variant mb-3">Uploadez votre CV PDF pour activer le matching IA</p>
               </div>
-              <div>
-                <div className="flex justify-between text-xs mb-1">
-                  <span className="text-on-surface-variant">Expérience</span>
-                  <span className="font-semibold text-on-surface">75%</span>
-                </div>
-                <div className="h-1.5 bg-white/60 rounded-full overflow-hidden">
-                  <div className="h-full w-3/4 bg-gradient-to-r from-primary to-secondary rounded-full"></div>
-                </div>
-              </div>
-            </div>
-            <div className="mt-4 p-3 bg-white/60 rounded-xl">
-              <div className="text-xs font-semibold text-on-surface mb-1">Recommandation IA</div>
-              <p className="text-xs text-on-surface-variant leading-relaxed">
-                Profil très prometteur. L'ajout d'une expérience pratique en déploiement cloud renforcerait significativement sa candidature.
-              </p>
-            </div>
+            )}
+            <button onClick={() => cvRef.current?.click()} disabled={uploadingCv}
+              className="mt-3 w-full flex items-center justify-center gap-2 py-2.5 border-2 border-primary text-primary text-sm font-semibold rounded-xl hover:bg-primary/5 transition-colors disabled:opacity-60">
+              <span className="material-symbols-outlined text-base">{uploadingCv ? 'progress_activity' : 'upload'}</span>
+              {uploadingCv ? 'Analyse en cours…' : cv ? 'Mettre à jour le CV' : 'Uploader mon CV'}
+            </button>
+            <input ref={cvRef} type="file" accept="application/pdf" className="hidden" onChange={handleCvChange} />
           </div>
         </div>
 
-        {/* Right: Detail content — 8 cols */}
-        <div className="col-span-8 space-y-6">
-          {/* À propos */}
-          <div className="bg-surface-container-low rounded-2xl border border-outline-variant p-6">
-            <h3 className="font-headline font-bold text-lg text-on-surface mb-3">À propos</h3>
-            <p className="text-sm text-on-surface-variant leading-relaxed">
-              Étudiant ingénieur en 3ème année à l'ENIM de Meknès, spécialisé en Intelligence Artificielle et Machine Learning. Passionné par les technologies émergentes et le développement de solutions innovantes, je cherche un stage de fin d'études dans le domaine de l'IA appliquée.
-            </p>
-            <p className="text-sm text-on-surface-variant leading-relaxed mt-3">
-              J'ai développé une solide base en mathématiques appliquées, algorithmes et programmation, complétée par des projets académiques en traitement du langage naturel et vision par ordinateur.
-            </p>
-          </div>
+        {/* Right — edit form */}
+        <div className="col-span-2">
+          <form onSubmit={handleSave} className="bg-surface-container-low rounded-2xl border border-outline-variant p-6 space-y-5">
+            <h2 className="font-headline font-bold text-lg text-on-surface">Informations personnelles</h2>
 
-          {/* Compétences */}
-          <div className="bg-surface-container-low rounded-2xl border border-outline-variant p-6">
-            <h3 className="font-headline font-bold text-lg text-on-surface mb-4">Compétences</h3>
-            <div className="space-y-3">
-              <div>
-                <div className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider mb-2">Langages & Frameworks</div>
-                <div className="flex flex-wrap gap-2">
-                  {['Python', 'JavaScript', 'React', 'Node.js', 'TensorFlow', 'PyTorch', 'SQL'].map((s) => (
-                    <span key={s} className="px-3 py-1.5 bg-primary/10 text-primary text-xs font-medium rounded-xl">{s}</span>
-                  ))}
+            <div className="grid grid-cols-2 gap-4">
+              {[
+                { label: 'Prénom', val: prenom, set: setPrenom },
+                { label: 'Nom', val: nom, set: setNom },
+              ].map(({ label, val, set }) => (
+                <div key={label}>
+                  <label className="block text-sm font-semibold text-on-surface mb-1.5">{label}</label>
+                  <input value={val} onChange={(e) => set(e.target.value)}
+                    className="w-full border border-outline-variant rounded-xl px-4 py-2.5 text-sm bg-surface outline-none focus:border-primary" />
                 </div>
+              ))}
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-on-surface mb-1.5">Téléphone</label>
+              <input value={telephone} onChange={(e) => setTelephone(e.target.value)} placeholder="+212 6XX XXX XXX"
+                className="w-full border border-outline-variant rounded-xl px-4 py-2.5 text-sm bg-surface outline-none focus:border-primary" />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-semibold text-on-surface mb-1.5">Département</label>
+                <select value={departement} onChange={(e) => setDepartement(e.target.value)}
+                  className="w-full border border-outline-variant rounded-xl px-4 py-2.5 text-sm bg-surface outline-none focus:border-primary">
+                  <option value="">— Choisir —</option>
+                  {DEPARTEMENTS.map((d) => <option key={d}>{d}</option>)}
+                </select>
               </div>
               <div>
-                <div className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider mb-2">IA & Data Science</div>
-                <div className="flex flex-wrap gap-2">
-                  {['Machine Learning', 'NLP', 'Deep Learning', 'Data Viz', 'Scikit-learn', 'Pandas'].map((s) => (
-                    <span key={s} className="px-3 py-1.5 bg-secondary/10 text-secondary text-xs font-medium rounded-xl">{s}</span>
-                  ))}
-                </div>
-              </div>
-              <div>
-                <div className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider mb-2">Outils</div>
-                <div className="flex flex-wrap gap-2">
-                  {['Git', 'Docker', 'Linux', 'VS Code', 'Jupyter'].map((s) => (
-                    <span key={s} className="px-3 py-1.5 bg-surface-container text-on-surface-variant text-xs font-medium rounded-xl">{s}</span>
-                  ))}
-                </div>
+                <label className="block text-sm font-semibold text-on-surface mb-1.5">Niveau</label>
+                <select value={niveau} onChange={(e) => setNiveau(e.target.value)}
+                  className="w-full border border-outline-variant rounded-xl px-4 py-2.5 text-sm bg-surface outline-none focus:border-primary">
+                  <option value="">— Choisir —</option>
+                  {NIVEAUX.map((n) => <option key={n}>{n}</option>)}
+                </select>
               </div>
             </div>
-          </div>
 
-          {/* Expériences */}
-          <div className="bg-surface-container-low rounded-2xl border border-outline-variant p-6">
-            <h3 className="font-headline font-bold text-lg text-on-surface mb-4">Expériences</h3>
-            <div className="space-y-5">
-              <div className="flex gap-4">
-                <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center flex-shrink-0 font-bold text-blue-600 text-xs">ST</div>
-                <div>
-                  <div className="font-semibold text-on-surface text-sm">Stage Développeur Web</div>
-                  <div className="text-xs text-on-surface-variant mb-1">StartupTech Maroc · Casablanca · Été 2025</div>
-                  <p className="text-xs text-on-surface-variant leading-relaxed">
-                    Développement d'une application web de gestion RH avec React et Node.js. Intégration d'une API REST et mise en place d'une base de données MongoDB.
-                  </p>
-                </div>
-              </div>
-              <div className="h-px bg-outline-variant"></div>
-              <div className="flex gap-4">
-                <div className="w-10 h-10 rounded-xl bg-green-50 flex items-center justify-center flex-shrink-0 font-bold text-green-600 text-xs">OT</div>
-                <div>
-                  <div className="font-semibold text-on-surface text-sm">Projet de recherche — NLP</div>
-                  <div className="text-xs text-on-surface-variant mb-1">Laboratoire IA, ENIM · Meknès · 2024-2025</div>
-                  <p className="text-xs text-on-surface-variant leading-relaxed">
-                    Développement d'un modèle de classification de textes en arabe dialectal. Publication d'un article de recherche en cours.
-                  </p>
-                </div>
-              </div>
+            <div>
+              <label className="block text-sm font-semibold text-on-surface mb-1.5">Filière / Spécialisation</label>
+              <input value={filiere} onChange={(e) => setFiliere(e.target.value)} placeholder="ex. Génie Informatique & IA"
+                className="w-full border border-outline-variant rounded-xl px-4 py-2.5 text-sm bg-surface outline-none focus:border-primary" />
             </div>
-          </div>
 
-          {/* Formation */}
-          <div className="bg-surface-container-low rounded-2xl border border-outline-variant p-6">
-            <h3 className="font-headline font-bold text-lg text-on-surface mb-4">Formation</h3>
-            <div className="space-y-5">
-              <div className="flex gap-4">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-secondary flex items-center justify-center flex-shrink-0">
-                  <span className="material-symbols-outlined text-white text-base" style={{ fontVariationSettings: "'FILL' 1" }}>school</span>
+            <div>
+              <label className="block text-sm font-semibold text-on-surface mb-1.5">
+                Compétences <span className="font-normal text-on-surface-variant">(séparées par des virgules)</span>
+              </label>
+              <input value={competencesStr} onChange={(e) => setCompetencesStr(e.target.value)}
+                placeholder="Python, React, Machine Learning, SQL…"
+                className="w-full border border-outline-variant rounded-xl px-4 py-2.5 text-sm bg-surface outline-none focus:border-primary" />
+              {competencesStr && (
+                <div className="flex flex-wrap gap-1.5 mt-2">
+                  {competencesStr.split(',').map((s) => s.trim()).filter(Boolean).map((s) => (
+                    <span key={s} className="text-xs bg-primary/10 text-primary px-2 py-1 rounded-lg">{s}</span>
+                  ))}
                 </div>
-                <div>
-                  <div className="font-semibold text-on-surface text-sm">Diplôme d'ingénieur — Génie Informatique</div>
-                  <div className="text-xs text-on-surface-variant mb-1">École Nationale d'Ingénieurs de Meknès (ENIM) · 2022–2025</div>
-                  <p className="text-xs text-on-surface-variant">Spécialisation : Intelligence Artificielle & Big Data</p>
-                </div>
-              </div>
-              <div className="h-px bg-outline-variant"></div>
-              <div className="flex gap-4">
-                <div className="w-10 h-10 rounded-xl bg-surface-container flex items-center justify-center flex-shrink-0">
-                  <span className="material-symbols-outlined text-on-surface-variant text-base" style={{ fontVariationSettings: "'FILL' 1" }}>school</span>
-                </div>
-                <div>
-                  <div className="font-semibold text-on-surface text-sm">Classes Préparatoires MP</div>
-                  <div className="text-xs text-on-surface-variant mb-1">Lycée Moulay Idriss · Fès · 2020–2022</div>
-                  <p className="text-xs text-on-surface-variant">Mathématiques et Physique — Mention Bien</p>
-                </div>
-              </div>
+              )}
             </div>
-          </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-on-surface mb-1.5">
+                Langues <span className="font-normal text-on-surface-variant">(séparées par des virgules)</span>
+              </label>
+              <input value={languesStr} onChange={(e) => setLanguesStr(e.target.value)}
+                placeholder="Arabe, Français, Anglais…"
+                className="w-full border border-outline-variant rounded-xl px-4 py-2.5 text-sm bg-surface outline-none focus:border-primary" />
+            </div>
+
+            <div className="flex gap-3 pt-2">
+              <button type="submit" disabled={saving}
+                className="btn-primary flex-1 justify-center disabled:opacity-60">
+                <span className="material-symbols-outlined text-xl">{saving ? 'progress_activity' : 'save'}</span>
+                {saving ? 'Enregistrement…' : 'Enregistrer'}
+              </button>
+              <button type="button" onClick={() => navigate(-1)} className="btn-ghost">Annuler</button>
+            </div>
+          </form>
         </div>
       </div>
     </div>

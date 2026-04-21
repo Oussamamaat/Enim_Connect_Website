@@ -1,123 +1,122 @@
-export default function CandidateList() {
+import { type Candidat, type Annonce } from "../api/client";
+
+interface Props {
+  annonce: Annonce | null;
+  candidats: Candidat[];
+  selectedId: string | null;
+  onSelect: (c: Candidat) => void;
+  loading: boolean;
+}
+
+const COLORS = [
+  "from-primary to-secondary",
+  "from-secondary to-purple-500",
+  "from-tertiary to-teal-500",
+  "from-orange-500 to-amber-400",
+  "from-green-500 to-emerald-400",
+];
+
+function initiales(nom: string, prenom: string) {
+  return `${prenom?.[0] ?? ""}${nom?.[0] ?? ""}`.toUpperCase();
+}
+
+export default function CandidateList({ annonce, candidats, selectedId, onSelect, loading }: Props) {
+  if (!annonce) {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center text-center px-8 bg-surface">
+        <span className="material-symbols-outlined text-5xl text-on-surface-variant mb-3">arrow_back</span>
+        <p className="font-semibold text-on-surface mb-1">Sélectionnez une offre</p>
+        <p className="text-sm text-on-surface-variant">Choisissez une offre dans le panneau de gauche pour voir ses candidats.</p>
+      </div>
+    );
+  }
+
   return (
-    <div className="flex-1 bg-surface overflow-y-auto custom-scrollbar p-8">
+    <div className="flex-1 bg-surface overflow-y-auto">
       {/* Header */}
-      <div className="mb-10 flex justify-between items-end">
-        <div>
-          <div className="flex items-center gap-2 mb-2">
-            <span className="px-2 py-0.5 bg-indigo-50 text-blue-600 text-[10px] font-bold rounded uppercase tracking-wider">
-              Tech &amp; Engineering
-            </span>
-          </div>
-          <h1 className="font-headline text-3xl font-extrabold tracking-tight text-on-surface">
-            Développeur Full Stack
-          </h1>
-          <p className="text-on-surface-variant mt-2 flex items-center gap-2">
-            <span className="material-symbols-outlined text-sm">
-              location_on
-            </span>
-            EnimConnect HQ • Rabat
-          </p>
-        </div>
-        <div className="flex gap-3">
-          <button className="p-2 rounded-lg border border-outline-variant/30 text-on-surface-variant hover:bg-surface-container transition-colors">
-            <span className="material-symbols-outlined">share</span>
-          </button>
-          <button className="p-2 rounded-lg border border-outline-variant/30 text-on-surface-variant hover:bg-surface-container transition-colors">
-            <span className="material-symbols-outlined">more_horiz</span>
-          </button>
-        </div>
+      <div className="sticky top-0 z-10 bg-surface/95 backdrop-blur-sm border-b border-outline-variant px-8 py-5">
+        <h1 className="font-headline font-extrabold text-2xl text-on-surface mb-0.5 line-clamp-1">{annonce.titre}</h1>
+        <p className="text-sm text-on-surface-variant">{annonce.departement} · {annonce.duree_mois ? `${annonce.duree_mois} mois` : "Durée non précisée"}</p>
       </div>
 
-      {/* AI Insights Section */}
-      <section className="mb-8 p-6 rounded-2xl bg-secondary-fixed/30 border border-secondary-fixed-dim/20 relative overflow-hidden">
-        <div className="absolute -right-10 -top-10 w-40 h-40 bg-secondary/5 blur-3xl rounded-full"></div>
-        <div className="flex gap-4 items-start relative z-10">
-          <div className="p-3 bg-secondary text-white rounded-xl shadow-lg shadow-secondary/20">
-            <span className="material-symbols-outlined">auto_awesome</span>
+      <div className="px-8 py-6">
+        {loading ? (
+          <div className="flex items-center justify-center py-16">
+            <span className="material-symbols-outlined text-3xl animate-spin text-on-surface-variant">progress_activity</span>
           </div>
-          <div>
-            <h3 className="font-headline font-bold text-on-secondary-fixed">
-              Résumé de l'Intelligence Artificielle
-            </h3>
-            <p className="text-on-surface-variant mt-2 text-sm leading-relaxed max-w-2xl">
-              Cette offre a attiré{" "}
-              <span className="font-bold text-on-surface">12 candidats</span>.
-              L'IA a identifié{" "}
-              <span className="font-bold text-secondary">
-                3 correspondances fortes (&gt;90%)
-              </span>{" "}
-              basées sur vos critères (compétences techniques, langue, score
-              d'expérience).
-            </p>
+        ) : candidats.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-16 text-center">
+            <span className="material-symbols-outlined text-5xl text-on-surface-variant mb-3">person_search</span>
+            <p className="font-semibold text-on-surface mb-1">Aucun candidat pour l'instant</p>
+            <p className="text-sm text-on-surface-variant">Les étudiants qui postuleront apparaîtront ici, triés par score IA.</p>
           </div>
-        </div>
-      </section>
-
-      {/* Candidates Grid/List */}
-      <div className="grid grid-cols-1 gap-4">
-        <h3 className="font-headline text-sm font-extrabold uppercase tracking-widest text-on-surface-variant/60 mb-2">
-          Top Correspondances
-        </h3>
-
-        {/* Candidate Card (Active/Selected) */}
-        <div className="group p-6 bg-surface-container-lowest rounded-2xl border-2 border-secondary shadow-xl shadow-secondary/5 flex items-center justify-between transition-all scale-[1.01]">
-          <div className="flex items-center gap-5">
-            <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-secondary/20">
-              <img
-                alt="Sarah Martin"
-                src="https://lh3.googleusercontent.com/aida-public/AB6AXuDGgAVnqxZhGAWvMZQGhYQwmPMF5UYGO3BG5C5blQp8d3-0Qa1S1p283qyRtIPTWeeylMxTrpvAuIcdCQW3mMX8wSZb9gQuLowo2y0O6yrtTsPk7M5Z8tANzfloHPlz-Kk-AUelqk4hRCAOdXUdjgtSLw5EDNWozQZig2gEmYQlD2Icq9JR4vJgAEmNdvnwCgMFqTpbv1pfsPwEvlRHdDrR9gkmcv9mADu3AjnBpH9HCzj-teDKU8lgT2Vcx-0GhJDY66SvjbrRWnRD"
-              />
-            </div>
-            <div>
-              <h4 className="font-headline font-bold text-lg text-on-surface">
-                Sarah Martin
-              </h4>
-              <p className="text-on-surface-variant text-sm">
-                Étudiante en 5ème année • Génie Logiciel
-              </p>
-              <div className="mt-2 flex gap-2">
-                <span className="px-2 py-1 bg-surface-container text-[10px] font-semibold rounded">
-                  React
-                </span>
-                <span className="px-2 py-1 bg-surface-container text-[10px] font-semibold rounded">
-                  Node.js
-                </span>
-                <span className="px-2 py-1 bg-surface-container text-[10px] font-semibold rounded">
-                  TypeScript
-                </span>
+        ) : (
+          <>
+            {/* AI summary */}
+            <div className="mb-6 p-5 rounded-2xl bg-secondary/5 border border-secondary/20">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 bg-secondary text-white rounded-xl flex-shrink-0">
+                  <span className="material-symbols-outlined text-lg">auto_awesome</span>
+                </div>
+                <div>
+                  <h3 className="font-semibold text-on-surface text-sm">Résumé IA</h3>
+                  <p className="text-sm text-on-surface-variant mt-0.5">
+                    <strong>{candidats.length}</strong> candidat{candidats.length > 1 ? "s" : ""} — classés par pertinence IA selon votre offre.
+                    {candidats.length > 0 && candidats[0].description_cv && " Les profils avec CV analysé sont prioritaires."}
+                  </p>
+                </div>
               </div>
             </div>
-          </div>
-        </div>
 
-        {/* Other candidates (Ghost-style) */}
-        <div className="group p-6 bg-white hover:bg-surface-container-lowest rounded-2xl border border-transparent hover:border-outline-variant/20 transition-all flex items-center justify-between">
-          <div className="flex items-center gap-5 opacity-80 group-hover:opacity-100">
-            <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-surface-container">
-              <img
-                alt="Thomas Leroy"
-                src="https://lh3.googleusercontent.com/aida-public/AB6AXuAJNAOiXbTA90khR48cQjg17MiB2RIdlCFFoNLYpRNqfq9uBqj5ZDwM_FP-Iu8TrLzOM1l4BMY5Re6go60L1d4l5hWKO-u-Mj84TEjQoJhNff5Aa3i6yLvnLnIsPMpVjxDZtANAnMEGgF8R2w4JN_HeVVgAa-YvIJzDBGTcxwfjUhohXa6XsSK0FquccoB9nEpzkmrbxmaOPYdJjoWPXX3ZlwX18bTslXz0bF5Vb5XC614ZpB2773eyGILdjM7NEBcmg36-BO_1TW-N"
-              />
+            <div className="space-y-3">
+              {candidats.map((c, i) => (
+                <button
+                  key={c.etudiant_id}
+                  onClick={() => onSelect(c)}
+                  className={`w-full text-left p-5 rounded-2xl border transition-all ${
+                    selectedId === c.etudiant_id
+                      ? "border-secondary bg-secondary/5 shadow-md"
+                      : "border-outline-variant bg-surface-container-low hover:border-secondary/40 hover:shadow-sm"
+                  }`}
+                >
+                  <div className="flex items-center gap-4">
+                    <div className={`w-14 h-14 rounded-xl bg-gradient-to-br ${COLORS[i % COLORS.length]} flex items-center justify-center text-white font-bold flex-shrink-0`}>
+                      {c.photo_url
+                        ? <img src={c.photo_url} className="w-full h-full rounded-xl object-cover" alt="" />
+                        : initiales(c.nom, c.prenom)
+                      }
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-0.5">
+                        <span className="font-semibold text-on-surface">{c.prenom} {c.nom}</span>
+                        {i === 0 && (
+                          <span className="text-xs font-bold bg-secondary text-white px-2 py-0.5 rounded-lg">Top match</span>
+                        )}
+                      </div>
+                      <p className="text-sm text-on-surface-variant">
+                        {c.filiere ?? c.niveau ?? "Étudiant ENSMR"}
+                        {c.niveau && c.filiere ? ` · ${c.niveau}` : ""}
+                      </p>
+                      {c.competences.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-2">
+                          {c.competences.slice(0, 4).map((s) => (
+                            <span key={s} className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-lg">{s}</span>
+                          ))}
+                          {c.competences.length > 4 && (
+                            <span className="text-xs text-on-surface-variant px-1">+{c.competences.length - 4}</span>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                    <div className="text-xs text-on-surface-variant flex-shrink-0">
+                      {new Date(c.date_candidature).toLocaleDateString("fr-FR")}
+                    </div>
+                  </div>
+                </button>
+              ))}
             </div>
-            <div>
-              <h4 className="font-headline font-bold text-lg text-on-surface">
-                Thomas Leroy
-              </h4>
-              <p className="text-on-surface-variant text-sm">
-                Étudiant en 4ème année • Full Stack
-              </p>
-              <div className="mt-2 flex gap-2">
-                <span className="px-2 py-1 bg-surface-container text-[10px] font-semibold rounded">
-                  Vue.js
-                </span>
-                <span className="px-2 py-1 bg-surface-container text-[10px] font-semibold rounded">
-                  Python
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
+          </>
+        )}
       </div>
     </div>
   );

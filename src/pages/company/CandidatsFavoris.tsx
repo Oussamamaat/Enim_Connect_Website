@@ -1,199 +1,176 @@
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useEffect, useState } from "react";
+import { api, type EtudiantRecherche } from "../../api/client";
 
-const CANDIDATES = [
-  {
-    id: 1,
-    name: 'Lucas Martin',
-    title: 'Étudiant Ingénieur IA — ENIM',
-    score: 99,
-    skills: ['Python', 'NLP', 'React'],
-    location: 'Meknès',
-    initials: 'LM',
-    color: 'from-primary to-secondary',
-    available: 'Mai 2026',
-  },
-  {
-    id: 2,
-    name: 'Yasmine Idrissi',
-    title: 'Master Data Science — EMI Rabat',
-    score: 95,
-    skills: ['Python', 'Spark', 'SQL'],
-    location: 'Rabat',
-    initials: 'YI',
-    color: 'from-secondary to-purple-500',
-    available: 'Juin 2026',
-  },
-  {
-    id: 3,
-    name: 'Omar Benali',
-    title: 'Master Design UX — ENA Casablanca',
-    score: 91,
-    skills: ['Figma', 'Adobe XD', 'CSS'],
-    location: 'Casablanca',
-    initials: 'OB',
-    color: 'from-tertiary to-tertiary-container',
-    available: 'Immédiat',
-  },
-  {
-    id: 4,
-    name: 'Karim Zouahri',
-    title: 'Ingénieur DevOps — INSEA',
-    score: 88,
-    skills: ['Docker', 'Kubernetes', 'CI/CD'],
-    location: 'Rabat',
-    initials: 'KZ',
-    color: 'from-green-500 to-teal-500',
-    available: 'Juil. 2026',
-  },
-  {
-    id: 5,
-    name: 'Sara Alaoui',
-    title: 'Master Marketing Digital — ENCG Fès',
-    score: 84,
-    skills: ['SEO', 'Analytics', 'Content'],
-    location: 'Fès',
-    initials: 'SA',
-    color: 'from-orange-500 to-amber-400',
-    available: 'Mai 2026',
-  },
+const DEPARTEMENTS = [
+  "Tous",
+  "Génie Informatique",
+  "Génie Électrique",
+  "Génie Civil",
+  "Génie Industriel",
+  "Génie Minier",
+  "Sciences de Base",
 ];
 
-export default function CandidatsFavoris() {
-  const [search, setSearch] = useState('');
-  const [activeFilter, setActiveFilter] = useState('Tous');
+const NIVEAUX = ["Tous", "1A", "2A", "3A"];
 
-  const filters = ['Tous', 'Développement', 'Data & IA', 'Design', 'Marketing'];
+const COLORS = [
+  "from-primary to-secondary",
+  "from-secondary to-purple-500",
+  "from-tertiary to-teal-500",
+  "from-orange-500 to-amber-400",
+  "from-green-500 to-emerald-400",
+];
+
+function initiales(nom: string, prenom: string) {
+  return `${prenom?.[0] ?? ""}${nom?.[0] ?? ""}`.toUpperCase();
+}
+
+export default function CandidatsFavoris() {
+  const [etudiants, setEtudiants] = useState<EtudiantRecherche[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [search, setSearch] = useState("");
+  const [departement, setDepartement] = useState("Tous");
+  const [niveau, setNiveau] = useState("Tous");
+
+  function load() {
+    setLoading(true);
+    api.rechercherEtudiants({
+      departement: departement !== "Tous" ? departement : undefined,
+      niveau: niveau !== "Tous" ? niveau : undefined,
+    })
+      .then(setEtudiants)
+      .catch(console.error)
+      .finally(() => setLoading(false));
+  }
+
+  useEffect(() => { load(); }, [departement, niveau]);
+
+  const filtered = etudiants.filter((e) => {
+    if (!search) return true;
+    const q = search.toLowerCase();
+    return (
+      e.nom.toLowerCase().includes(q) ||
+      e.prenom.toLowerCase().includes(q) ||
+      (e.filiere ?? "").toLowerCase().includes(q) ||
+      e.competences.some((c) => c.toLowerCase().includes(q))
+    );
+  });
 
   return (
-    <div className="flex-grow ml-0 flex flex-col min-h-screen">
+    <div className="flex-grow flex flex-col min-h-screen">
       {/* Header */}
-      <div className="sticky top-16 z-10 bg-surface/90 backdrop-blur-md border-b border-outline-variant px-10 py-5">
+      <div className="sticky top-16 z-10 bg-surface/95 backdrop-blur-md border-b border-outline-variant px-10 py-5">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h1 className="font-headline font-bold text-2xl text-on-surface">Candidats favoris</h1>
-            <p className="text-sm text-on-surface-variant mt-0.5">{CANDIDATES.length} candidats sauvegardés</p>
+            <h1 className="font-headline font-bold text-2xl text-on-surface">Recherche d'étudiants</h1>
+            <p className="text-sm text-on-surface-variant mt-0.5">
+              {loading ? "Chargement…" : `${filtered.length} étudiant${filtered.length !== 1 ? "s" : ""} trouvé${filtered.length !== 1 ? "s" : ""}`}
+            </p>
           </div>
           <div className="flex items-center gap-2 px-4 py-2 bg-primary/10 rounded-xl">
-            <span className="material-symbols-outlined text-primary text-lg" style={{ fontVariationSettings: "'FILL' 1" }}>auto_awesome</span>
-            <span className="text-sm font-medium text-primary">Triés par score IA</span>
+            <span className="material-symbols-outlined text-primary text-lg" style={{ fontVariationSettings: "'FILL' 1" }}>person_search</span>
+            <span className="text-sm font-medium text-primary">Base étudiants ENSMR</span>
           </div>
         </div>
 
-        {/* Filter bar */}
+        {/* Filters */}
         <div className="flex items-center gap-3 flex-wrap">
-          {/* Search */}
-          <div className="flex items-center gap-2 bg-surface-container border border-outline-variant rounded-xl px-3 py-2 w-64">
+          <div className="flex items-center gap-2 bg-surface-container border border-outline-variant rounded-xl px-3 py-2 w-56">
             <span className="material-symbols-outlined text-on-surface-variant text-lg">search</span>
             <input
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Rechercher un candidat…"
+              placeholder="Nom, filière, compétence…"
               className="bg-transparent text-sm text-on-surface placeholder-on-surface-variant outline-none w-full"
             />
           </div>
-          {/* Domain filters */}
-          <div className="flex gap-1.5">
-            {filters.map((f) => (
-              <button
-                key={f}
-                onClick={() => setActiveFilter(f)}
-                className={`px-3 py-2 rounded-xl text-xs font-medium transition-colors ${
-                  activeFilter === f
-                    ? 'bg-primary text-white'
-                    : 'bg-surface-container text-on-surface-variant hover:bg-surface-container-high'
-                }`}
-              >
-                {f}
-              </button>
-            ))}
-          </div>
+
+          <select
+            value={departement}
+            onChange={(e) => setDepartement(e.target.value)}
+            className="border border-outline-variant rounded-xl px-3 py-2 text-sm text-on-surface bg-surface outline-none focus:border-primary"
+          >
+            {DEPARTEMENTS.map((d) => <option key={d}>{d}</option>)}
+          </select>
+
+          <select
+            value={niveau}
+            onChange={(e) => setNiveau(e.target.value)}
+            className="border border-outline-variant rounded-xl px-3 py-2 text-sm text-on-surface bg-surface outline-none focus:border-primary min-w-[80px]"
+          >
+            {NIVEAUX.map((n) => <option key={n}>{n}</option>)}
+          </select>
         </div>
       </div>
 
-      {/* Bento grid of candidate cards */}
-      <div className="px-10 py-6 grid grid-cols-3 gap-4">
-        {CANDIDATES.map((c) => (
-          <div key={c.id} className="bg-surface-container-low rounded-2xl border border-outline-variant p-5 hover:border-primary/30 hover:shadow-md transition-all">
-            {/* Card header */}
-            <div className="flex items-start justify-between mb-4">
-              <div className="flex items-center gap-3">
-                <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${c.color} flex items-center justify-center text-white font-bold text-sm flex-shrink-0`}>
-                  {c.initials}
-                </div>
-                <div>
-                  <div className="font-semibold text-on-surface text-sm leading-tight">{c.name}</div>
-                  <div className="text-xs text-on-surface-variant leading-tight mt-0.5">{c.title}</div>
-                </div>
-              </div>
-              <button className="w-8 h-8 rounded-xl flex items-center justify-center text-primary hover:bg-primary/10 transition-colors">
-                <span className="material-symbols-outlined text-lg" style={{ fontVariationSettings: "'FILL' 1" }}>favorite</span>
-              </button>
-            </div>
-
-            {/* AI score */}
-            <div className="flex items-center gap-2 mb-3">
-              <div className="flex-1 h-1.5 bg-surface-container rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-gradient-to-r from-primary to-secondary rounded-full transition-all"
-                  style={{ width: `${c.score}%` }}
-                ></div>
-              </div>
-              <span className="text-xs font-bold text-green-600">{c.score}%</span>
-            </div>
-
-            {/* Skills */}
-            <div className="flex flex-wrap gap-1.5 mb-4">
-              {c.skills.map((s) => (
-                <span key={s} className="text-xs bg-primary/10 text-primary px-2 py-1 rounded-lg font-medium">{s}</span>
-              ))}
-            </div>
-
-            {/* Meta */}
-            <div className="flex items-center justify-between text-xs text-on-surface-variant mb-4">
-              <span className="flex items-center gap-1">
-                <span className="material-symbols-outlined text-sm">location_on</span>
-                {c.location}
-              </span>
-              <span className="flex items-center gap-1">
-                <span className="material-symbols-outlined text-sm">event_available</span>
-                Dispo : {c.available}
-              </span>
-            </div>
-
-            {/* Actions */}
-            <div className="flex gap-2">
-              <Link
-                to={`/etudiant/profil/${c.id}`}
-                className="flex-1 text-center py-2 text-xs font-semibold text-primary bg-primary/10 rounded-xl hover:bg-primary/20 transition-colors"
+      {/* Content */}
+      <div className="px-10 py-6 flex-1">
+        {loading ? (
+          <div className="flex items-center justify-center py-24">
+            <span className="material-symbols-outlined text-4xl animate-spin text-on-surface-variant">progress_activity</span>
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-24 text-center">
+            <span className="material-symbols-outlined text-6xl text-on-surface-variant mb-4">person_search</span>
+            <p className="font-semibold text-on-surface mb-2 text-lg">Aucun étudiant trouvé</p>
+            <p className="text-on-surface-variant text-sm">Modifiez vos filtres ou attendez que des étudiants complètent leur profil.</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-3 gap-4">
+            {filtered.map((e, i) => (
+              <div
+                key={e.etudiant_id}
+                className="bg-surface-container-low rounded-2xl border border-outline-variant p-5 hover:border-primary/30 hover:shadow-md transition-all"
               >
-                Voir le profil
-              </Link>
-              <button className="flex-1 py-2 text-xs font-semibold text-white bg-gradient-to-r from-primary to-secondary rounded-xl hover:opacity-90 transition-opacity">
-                Contacter
-              </button>
-            </div>
-          </div>
-        ))}
+                <div className="flex items-start justify-between mb-4">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${COLORS[i % COLORS.length]} flex items-center justify-center text-white font-bold text-sm flex-shrink-0`}>
+                      {initiales(e.nom, e.prenom)}
+                    </div>
+                    <div>
+                      <div className="font-semibold text-on-surface text-sm leading-tight">{e.prenom} {e.nom}</div>
+                      <div className="text-xs text-on-surface-variant leading-tight mt-0.5">
+                        {e.filiere ?? e.departement ?? "ENSMR"}
+                        {e.niveau ? ` · ${e.niveau}` : ""}
+                      </div>
+                    </div>
+                  </div>
+                  {e.a_un_cv && (
+                    <span className="text-xs bg-green-50 text-green-600 px-2 py-0.5 rounded-lg font-medium flex-shrink-0">CV IA</span>
+                  )}
+                </div>
 
-        {/* Empty state / add more card */}
-        <div className="bg-surface-container-low rounded-2xl border border-dashed border-outline-variant p-5 flex flex-col items-center justify-center text-center min-h-48">
-          <div className="w-12 h-12 rounded-xl bg-surface-container flex items-center justify-center mb-3">
-            <span className="material-symbols-outlined text-on-surface-variant text-2xl">person_add</span>
+                {e.competences.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 mb-4">
+                    {e.competences.slice(0, 5).map((s) => (
+                      <span key={s} className="text-xs bg-primary/10 text-primary px-2 py-1 rounded-lg font-medium">{s}</span>
+                    ))}
+                  </div>
+                )}
+
+                {(e.departement || e.niveau) && (
+                  <div className="flex items-center gap-3 text-xs text-on-surface-variant mb-4">
+                    {e.departement && (
+                      <span className="flex items-center gap-1">
+                        <span className="material-symbols-outlined text-sm">school</span>
+                        {e.departement}
+                      </span>
+                    )}
+                  </div>
+                )}
+
+                <a
+                  href={`mailto:${e.email}`}
+                  className="w-full flex items-center justify-center gap-2 py-2 text-xs font-semibold text-white bg-gradient-to-r from-primary to-secondary rounded-xl hover:opacity-90 transition-opacity"
+                >
+                  <span className="material-symbols-outlined text-sm">mail</span>
+                  Contacter
+                </a>
+              </div>
+            ))}
           </div>
-          <div className="text-sm font-semibold text-on-surface mb-1">Ajouter des candidats</div>
-          <div className="text-xs text-on-surface-variant mb-4 leading-relaxed">
-            Parcourez les candidatures reçues et sauvegardez vos profils favoris.
-          </div>
-          <Link
-            to="/entreprise/tableau-de-bord"
-            className="text-xs font-semibold text-primary hover:underline flex items-center gap-1"
-          >
-            Voir les candidatures
-            <span className="material-symbols-outlined text-sm">arrow_forward</span>
-          </Link>
-        </div>
+        )}
       </div>
     </div>
   );

@@ -1,28 +1,29 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 
 // Layouts
-import StudentLayout from './components/layout/StudentLayout';
-import CompanyLayout from './components/layout/CompanyLayout';
-import AdminLayout from './components/layout/AdminLayout';
+import StudentLayout from "./components/layout/StudentLayout";
+import CompanyLayout from "./components/layout/CompanyLayout";
+import AdminLayout from "./components/layout/AdminLayout";
 
 // Auth
-import LoginPage from './pages/auth/LoginPage';
+import LoginPage from "./pages/auth/LoginPage";
 
 // Student Pages
-import DashboardEtudiant from './pages/student/DashboardEtudiant';
-import RechercheStages from './pages/student/RechercheStages';
-import MesCandidatures from './pages/student/MesCandidatures';
-import ProfilCandidat from './pages/student/ProfilCandidat';
-import DetailsOffre from './pages/student/DetailsOffre';
+import DashboardEtudiant from "./pages/student/DashboardEtudiant";
+import RechercheStages from "./pages/student/RechercheStages";
+import MesCandidatures from "./pages/student/MesCandidatures";
+import ProfilCandidat from "./pages/student/ProfilCandidat";
+import DetailsOffre from "./pages/student/DetailsOffre";
 
 // Company Pages
-import DashboardEntreprise from './pages/company/DashboardEntreprise';
-import PublierOffre from './pages/company/PublierOffre';
-import CandidatsFavoris from './pages/company/CandidatsFavoris';
-import GestionCandidats from './pages/company/GestionCandidats';
+import DashboardEntreprise from "./pages/company/DashboardEntreprise";
+import PublierOffre from "./pages/company/PublierOffre";
+import CandidatsFavoris from "./pages/company/CandidatsFavoris";
+import GestionCandidats from "./pages/company/GestionCandidats";
 
 // Admin Pages
-import InterfaceAdministration from './pages/admin/InterfaceAdministration';
+import InterfaceAdministration from "./pages/admin/InterfaceAdministration";
+import EntreprisesValidation from "./pages/admin/EntreprisesValidation";
 
 export default function App() {
   return (
@@ -31,7 +32,7 @@ export default function App() {
         <Routes>
           {/* Auth Route */}
           <Route path="/" element={<LoginPage />} />
-          
+
           {/* Student Routes */}
           <Route path="/etudiant" element={<StudentLayout />}>
             <Route path="tableau-de-bord" element={<DashboardEtudiant />} />
@@ -51,9 +52,10 @@ export default function App() {
             <Route index element={<Navigate to="tableau-de-bord" replace />} />
           </Route>
 
-          {/* Admin Routes */}
+          {/* Club/Admin Routes */}
           <Route path="/admin" element={<AdminLayout />}>
             <Route path="interface" element={<InterfaceAdministration />} />
+            <Route path="entreprises" element={<EntreprisesValidation />} />
             <Route index element={<Navigate to="interface" replace />} />
           </Route>
         </Routes>

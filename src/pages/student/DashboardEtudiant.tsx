@@ -1,261 +1,199 @@
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { api, type Annonce } from '../../api/client';
+
+interface Profil { nom: string; prenom: string; filiere?: string; niveau?: string; competences: string[]; }
+interface Candidature { id: string; annonce_id: string; date: string; titre_annonce?: string; nom_entreprise?: string; }
 
 export default function DashboardEtudiant() {
+  const [profil, setProfil] = useState<Profil | null>(null);
+  const [candidatures, setCandidatures] = useState<Candidature[]>([]);
+  const [annonces, setAnnonces] = useState<Annonce[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    Promise.all([
+      api.getMonProfil() as Promise<Profil>,
+      api.getMesCandidatures() as Promise<Candidature[]>,
+      api.getAnnonces() as Promise<Annonce[]>,
+    ]).then(([p, c, a]) => {
+      setProfil(p); setCandidatures(c); setAnnonces(a);
+    }).catch(console.error).finally(() => setLoading(false));
+  }, []);
+
+  const prenom = profil?.prenom || 'Étudiant';
+  const topAnnonces = annonces.slice(0, 4);
+
   return (
-    <main className="ml-0 pt-8 pb-12 px-10 min-h-screen">
-      {/* Welcome Header */}
-      <div className="mb-8">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="font-headline font-extrabold text-3xl text-on-surface mb-1">
-              Bienvenue, Lucas ! 👋
-            </h1>
-            <p className="text-on-surface-variant">
-              Voici un aperçu de votre activité de recherche de stage.
-            </p>
+    <main className="min-h-screen pb-12 px-10 pt-8">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-8">
+        <div>
+          <h1 className="font-headline font-extrabold text-3xl text-on-surface mb-1">
+            Bienvenue, {loading ? '…' : prenom} !
+          </h1>
+          <p className="text-on-surface-variant">
+            {profil?.filiere ? `${profil.filiere}${profil.niveau ? ` · ${profil.niveau}` : ''}` : 'Complétez votre profil pour activer le matching IA'}
+          </p>
+        </div>
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 px-4 py-2 bg-primary/10 rounded-xl">
+            <span className="material-symbols-outlined text-primary text-lg" style={{ fontVariationSettings: "'FILL' 1" }}>auto_awesome</span>
+            <span className="text-sm font-medium text-primary">IA activée</span>
           </div>
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2 px-4 py-2 bg-primary/10 rounded-xl">
-              <span className="material-symbols-outlined text-primary text-lg" style={{ fontVariationSettings: "'FILL' 1" }}>auto_awesome</span>
-              <span className="text-sm font-medium text-primary">IA activée</span>
-            </div>
-            <Link
-              to="/etudiant/recherche"
-              className="btn-primary"
-            >
-              <span className="material-symbols-outlined text-xl">search</span>
-              Rechercher
-            </Link>
-          </div>
+          <Link to="/etudiant/recherche" className="btn-primary">
+            <span className="material-symbols-outlined text-xl">search</span>
+            Rechercher
+          </Link>
         </div>
       </div>
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-3 gap-6 mb-8">
-        {/* Candidatures */}
-        <div className="bg-surface-container-low rounded-2xl p-6 border border-outline-variant">
-          <div className="flex items-center justify-between mb-4">
-            <div className="w-11 h-11 rounded-xl bg-primary/10 flex items-center justify-center">
-              <span className="material-symbols-outlined text-primary text-2xl" style={{ fontVariationSettings: "'FILL' 1" }}>assignment</span>
-            </div>
-            <span className="text-xs font-medium text-green-600 bg-green-50 px-2 py-1 rounded-lg">+3 ce mois</span>
-          </div>
-          <div className="font-headline font-extrabold text-4xl text-on-surface mb-1">12</div>
-          <div className="text-sm text-on-surface-variant font-medium">Candidatures envoyées</div>
-          <div className="mt-4 h-1.5 bg-surface-container rounded-full overflow-hidden">
-            <div className="h-full w-3/5 bg-gradient-to-r from-primary to-secondary rounded-full"></div>
-          </div>
+      {/* Stats */}
+      <div className="grid grid-cols-3 gap-5 mb-8">
+        <div className="bg-gradient-to-br from-primary to-secondary rounded-2xl p-6 text-white">
+          <span className="material-symbols-outlined text-3xl text-white/80 mb-3 block" style={{ fontVariationSettings: "'FILL' 1" }}>assignment</span>
+          <div className="font-headline font-extrabold text-4xl mb-1">{loading ? '—' : candidatures.length}</div>
+          <div className="text-white/80 text-sm font-medium">Candidatures envoyées</div>
         </div>
-
-        {/* Entretiens */}
         <div className="bg-surface-container-low rounded-2xl p-6 border border-outline-variant">
-          <div className="flex items-center justify-between mb-4">
-            <div className="w-11 h-11 rounded-xl bg-secondary/10 flex items-center justify-center">
-              <span className="material-symbols-outlined text-secondary text-2xl" style={{ fontVariationSettings: "'FILL' 1" }}>calendar_month</span>
-            </div>
-            <span className="text-xs font-medium text-blue-600 bg-blue-50 px-2 py-1 rounded-lg">Cette semaine</span>
+          <div className="w-11 h-11 rounded-xl bg-secondary/10 flex items-center justify-center mb-3">
+            <span className="material-symbols-outlined text-secondary text-2xl" style={{ fontVariationSettings: "'FILL' 1" }}>work</span>
           </div>
-          <div className="font-headline font-extrabold text-4xl text-on-surface mb-1">3</div>
-          <div className="text-sm text-on-surface-variant font-medium">Entretiens prévus</div>
-          <div className="mt-4 h-1.5 bg-surface-container rounded-full overflow-hidden">
-            <div className="h-full w-1/4 bg-gradient-to-r from-secondary to-primary rounded-full"></div>
-          </div>
+          <div className="font-headline font-extrabold text-4xl text-on-surface mb-1">{loading ? '—' : annonces.length}</div>
+          <div className="text-on-surface-variant text-sm font-medium">Offres disponibles</div>
         </div>
-
-        {/* Matches */}
         <div className="bg-surface-container-low rounded-2xl p-6 border border-outline-variant">
-          <div className="flex items-center justify-between mb-4">
-            <div className="w-11 h-11 rounded-xl bg-tertiary/10 flex items-center justify-center">
-              <span className="material-symbols-outlined text-tertiary text-2xl" style={{ fontVariationSettings: "'FILL' 1" }}>auto_awesome</span>
-            </div>
-            <span className="text-xs font-medium text-orange-600 bg-orange-50 px-2 py-1 rounded-lg">Nouveaux</span>
+          <div className="w-11 h-11 rounded-xl bg-tertiary/10 flex items-center justify-center mb-3">
+            <span className="material-symbols-outlined text-tertiary text-2xl" style={{ fontVariationSettings: "'FILL' 1" }}>auto_awesome</span>
           </div>
-          <div className="font-headline font-extrabold text-4xl text-on-surface mb-1">8</div>
-          <div className="text-sm text-on-surface-variant font-medium">Matches recommandés</div>
-          <div className="mt-4 h-1.5 bg-surface-container rounded-full overflow-hidden">
-            <div className="h-full w-2/3 bg-gradient-to-r from-tertiary to-tertiary-container rounded-full"></div>
-          </div>
+          <div className="font-headline font-extrabold text-4xl text-on-surface mb-1">{loading ? '—' : (profil?.competences.length ?? 0)}</div>
+          <div className="text-on-surface-variant text-sm font-medium">Compétences renseignées</div>
         </div>
       </div>
 
-      {/* Main content grid */}
       <div className="grid grid-cols-3 gap-6">
-        {/* AI Recommendations — spans 2 cols */}
-        <div className="col-span-2 space-y-6">
+        {/* Offres recommandées */}
+        <div className="col-span-2 space-y-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <span className="material-symbols-outlined text-primary text-xl" style={{ fontVariationSettings: "'FILL' 1" }}>auto_awesome</span>
-              <h2 className="font-headline font-bold text-xl text-on-surface">Recommandations IA</h2>
+              <h2 className="font-headline font-bold text-xl text-on-surface">
+                {annonces.length > 0 && candidatures.length === 0 ? 'Offres recommandées par IA' : 'Offres disponibles'}
+              </h2>
             </div>
-            <Link to="/etudiant/recherche" className="text-sm text-primary font-medium hover:underline">
-              Voir tout
-            </Link>
+            <Link to="/etudiant/recherche" className="text-sm text-primary font-medium hover:underline">Voir tout</Link>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            {/* Card 1 */}
-            <Link to="/etudiant/offre/1" className="bg-surface-container-low rounded-2xl p-5 border border-outline-variant hover:border-primary/30 hover:shadow-md transition-all group">
-              <div className="flex items-start justify-between mb-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center font-bold text-blue-600 text-sm">TW</div>
-                  <div>
-                    <div className="font-semibold text-on-surface text-sm leading-tight">Stage Développeur Full-Stack</div>
-                    <div className="text-xs text-on-surface-variant">TechWave Morocco</div>
+          {loading ? (
+            <div className="flex items-center justify-center py-16 text-on-surface-variant">
+              <span className="material-symbols-outlined animate-spin text-2xl">progress_activity</span>
+            </div>
+          ) : topAnnonces.length === 0 ? (
+            <div className="bg-surface-container-low rounded-2xl border border-outline-variant p-10 text-center">
+              <span className="material-symbols-outlined text-5xl text-on-surface-variant mb-3 block">work_off</span>
+              <p className="font-semibold text-on-surface mb-1">Aucune offre disponible</p>
+              <p className="text-sm text-on-surface-variant">Les offres validées apparaîtront ici, triées par IA selon votre profil.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-4">
+              {topAnnonces.map((a, i) => (
+                <Link key={a.id} to={`/etudiant/offre/${a.id}`}
+                  className={`rounded-2xl p-5 border hover:shadow-md transition-all ${
+                    i === 0 ? 'col-span-2 bg-gradient-to-r from-primary/5 to-secondary/5 border-primary/20 hover:border-primary/40'
+                             : 'bg-surface-container-low border-outline-variant hover:border-primary/30'
+                  }`}
+                >
+                  {i === 0 && (
+                    <div className="flex items-center gap-2 mb-3">
+                      <span className="material-symbols-outlined text-primary text-lg" style={{ fontVariationSettings: "'FILL' 1" }}>auto_awesome</span>
+                      <span className="text-xs font-semibold text-primary">Meilleur match IA</span>
+                    </div>
+                  )}
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center font-bold text-primary text-sm flex-shrink-0">
+                        {(a.nom_entreprise ?? '?').slice(0, 2).toUpperCase()}
+                      </div>
+                      <div>
+                        <div className="font-semibold text-on-surface text-sm leading-tight">{a.titre}</div>
+                        <div className="text-xs text-on-surface-variant">{a.nom_entreprise ?? 'Entreprise'}</div>
+                      </div>
+                    </div>
                   </div>
-                </div>
-                <span className="text-xs font-bold text-green-600 bg-green-50 px-2 py-1 rounded-lg">96%</span>
-              </div>
-              <div className="flex flex-wrap gap-1.5 mb-4">
-                <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded-lg">React</span>
-                <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded-lg">Node.js</span>
-                <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded-lg">MongoDB</span>
-              </div>
-              <div className="flex items-center justify-between text-xs text-on-surface-variant">
-                <span className="flex items-center gap-1">
-                  <span className="material-symbols-outlined text-sm">location_on</span>
-                  Casablanca
-                </span>
-                <span className="flex items-center gap-1">
-                  <span className="material-symbols-outlined text-sm">schedule</span>
-                  6 mois
-                </span>
-              </div>
-            </Link>
-
-            {/* Card 2 */}
-            <Link to="/etudiant/offre/2" className="bg-surface-container-low rounded-2xl p-5 border border-outline-variant hover:border-primary/30 hover:shadow-md transition-all group">
-              <div className="flex items-start justify-between mb-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-purple-50 flex items-center justify-center font-bold text-purple-600 text-sm">DS</div>
-                  <div>
-                    <div className="font-semibold text-on-surface text-sm leading-tight">Stage Data Science</div>
-                    <div className="text-xs text-on-surface-variant">DataSphere Labs</div>
+                  <div className="flex flex-wrap gap-1.5">
+                    <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded-lg">{a.departement}</span>
+                    {a.duree_mois && <span className="text-xs bg-surface-container text-on-surface-variant px-2 py-1 rounded-lg">{a.duree_mois} mois</span>}
+                    {a.ville && <span className="text-xs bg-surface-container text-on-surface-variant px-2 py-1 rounded-lg">{a.ville}</span>}
                   </div>
-                </div>
-                <span className="text-xs font-bold text-green-600 bg-green-50 px-2 py-1 rounded-lg">91%</span>
-              </div>
-              <div className="flex flex-wrap gap-1.5 mb-4">
-                <span className="text-xs bg-secondary/10 text-secondary px-2 py-1 rounded-lg">Python</span>
-                <span className="text-xs bg-secondary/10 text-secondary px-2 py-1 rounded-lg">ML</span>
-                <span className="text-xs bg-secondary/10 text-secondary px-2 py-1 rounded-lg">TensorFlow</span>
-              </div>
-              <div className="flex items-center justify-between text-xs text-on-surface-variant">
-                <span className="flex items-center gap-1">
-                  <span className="material-symbols-outlined text-sm">location_on</span>
-                  Rabat
-                </span>
-                <span className="flex items-center gap-1">
-                  <span className="material-symbols-outlined text-sm">schedule</span>
-                  4 mois
-                </span>
-              </div>
-            </Link>
-
-            {/* Card 3 — spans 2 cols */}
-            <Link to="/etudiant/offre/3" className="col-span-2 bg-gradient-to-r from-primary/5 to-secondary/5 rounded-2xl p-5 border border-primary/20 hover:border-primary/40 hover:shadow-md transition-all">
-              <div className="flex items-center gap-2 mb-3">
-                <span className="material-symbols-outlined text-primary text-lg" style={{ fontVariationSettings: "'FILL' 1" }}>auto_awesome</span>
-                <span className="text-xs font-semibold text-primary">Coup de cœur IA — Match parfait</span>
-              </div>
-              <div className="flex items-start justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-xl bg-white border border-outline-variant flex items-center justify-center font-bold text-primary text-sm shadow-sm">AI</div>
-                  <div>
-                    <div className="font-semibold text-on-surface leading-tight">Stage Intelligence Artificielle & NLP</div>
-                    <div className="text-sm text-on-surface-variant">InnovateTech — Casablanca · Hybride</div>
-                  </div>
-                </div>
-                <span className="text-sm font-bold text-primary bg-primary/10 px-3 py-1.5 rounded-xl">99%</span>
-              </div>
-              <div className="flex flex-wrap gap-1.5 mt-4">
-                <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded-lg">Python</span>
-                <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded-lg">NLP</span>
-                <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded-lg">LangChain</span>
-                <span className="text-xs bg-secondary/10 text-secondary px-2 py-1 rounded-lg">Transformers</span>
-              </div>
-            </Link>
-          </div>
+                </Link>
+              ))}
+            </div>
+          )}
         </div>
 
-        {/* Recent Activity Sidebar */}
-        <div className="col-span-1">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="font-headline font-bold text-xl text-on-surface">Activité récente</h2>
-          </div>
-          <div className="bg-surface-container-low rounded-2xl border border-outline-variant p-5">
-            <div className="space-y-5">
-              {/* Timeline item */}
-              <div className="flex gap-3">
-                <div className="flex flex-col items-center">
-                  <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
-                    <span className="material-symbols-outlined text-green-600 text-sm" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
-                  </div>
-                  <div className="w-px h-full bg-outline-variant mt-2 flex-1"></div>
+        {/* Sidebar */}
+        <div className="space-y-4">
+          {/* Mes candidatures récentes */}
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="font-headline font-bold text-lg text-on-surface">Mes candidatures</h2>
+              <Link to="/etudiant/candidatures" className="text-sm text-primary font-medium hover:underline">Voir tout</Link>
+            </div>
+            <div className="bg-surface-container-low rounded-2xl border border-outline-variant p-4 space-y-3">
+              {loading ? (
+                <div className="flex items-center justify-center py-4">
+                  <span className="material-symbols-outlined animate-spin text-on-surface-variant">progress_activity</span>
                 </div>
-                <div className="pb-5">
-                  <div className="text-sm font-medium text-on-surface leading-tight">Candidature envoyée</div>
-                  <div className="text-xs text-on-surface-variant mt-0.5">TechWave Morocco — Stage Full-Stack</div>
-                  <div className="text-xs text-on-surface-variant mt-1">Il y a 2 heures</div>
+              ) : candidatures.length === 0 ? (
+                <div className="text-center py-6">
+                  <span className="material-symbols-outlined text-3xl text-on-surface-variant mb-2 block">assignment</span>
+                  <p className="text-xs text-on-surface-variant">Aucune candidature</p>
+                  <Link to="/etudiant/recherche" className="mt-2 text-xs font-semibold text-primary hover:underline block">
+                    Explorer les offres
+                  </Link>
                 </div>
-              </div>
-
-              {/* Timeline item */}
-              <div className="flex gap-3">
-                <div className="flex flex-col items-center">
-                  <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
-                    <span className="material-symbols-outlined text-blue-600 text-sm" style={{ fontVariationSettings: "'FILL' 1" }}>calendar_month</span>
-                  </div>
-                  <div className="w-px h-full bg-outline-variant mt-2 flex-1"></div>
-                </div>
-                <div className="pb-5">
-                  <div className="text-sm font-medium text-on-surface leading-tight">Entretien planifié</div>
-                  <div className="text-xs text-on-surface-variant mt-0.5">DataSphere Labs — Demain 14h00</div>
-                  <div className="text-xs text-on-surface-variant mt-1">Il y a 1 jour</div>
-                </div>
-              </div>
-
-              {/* Timeline item */}
-              <div className="flex gap-3">
-                <div className="flex flex-col items-center">
-                  <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center flex-shrink-0">
-                    <span className="material-symbols-outlined text-purple-600 text-sm" style={{ fontVariationSettings: "'FILL' 1" }}>auto_awesome</span>
-                  </div>
-                  <div className="w-px h-full bg-outline-variant mt-2 flex-1"></div>
-                </div>
-                <div className="pb-5">
-                  <div className="text-sm font-medium text-on-surface leading-tight">Nouveau match IA</div>
-                  <div className="text-xs text-on-surface-variant mt-0.5">8 nouvelles offres recommandées</div>
-                  <div className="text-xs text-on-surface-variant mt-1">Il y a 2 jours</div>
-                </div>
-              </div>
-
-              {/* Timeline item */}
-              <div className="flex gap-3">
-                <div className="flex flex-col items-center">
-                  <div className="w-8 h-8 rounded-full bg-orange-100 flex items-center justify-center flex-shrink-0">
-                    <span className="material-symbols-outlined text-orange-600 text-sm" style={{ fontVariationSettings: "'FILL' 1" }}>visibility</span>
-                  </div>
-                </div>
-                <div>
-                  <div className="text-sm font-medium text-on-surface leading-tight">Profil consulté</div>
-                  <div className="text-xs text-on-surface-variant mt-0.5">InnovateTech a consulté votre profil</div>
-                  <div className="text-xs text-on-surface-variant mt-1">Il y a 3 jours</div>
-                </div>
-              </div>
+              ) : (
+                candidatures.slice(0, 4).map((c) => (
+                  <Link key={c.id} to={`/etudiant/offre/${c.annonce_id}`}
+                    className="flex items-center gap-3 p-2 rounded-xl hover:bg-surface-container transition-colors"
+                  >
+                    <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-xs font-bold text-primary flex-shrink-0">
+                      {(c.nom_entreprise ?? '?').slice(0, 2).toUpperCase()}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-xs font-semibold text-on-surface truncate">{c.titre_annonce ?? 'Offre'}</div>
+                      <div className="text-xs text-on-surface-variant">{c.nom_entreprise}</div>
+                    </div>
+                  </Link>
+                ))
+              )}
             </div>
           </div>
 
-          {/* Quick tips */}
-          <div className="mt-4 p-4 bg-gradient-to-br from-primary/5 to-secondary/5 rounded-2xl border border-primary/10">
-            <div className="flex items-center gap-2 mb-2">
+          {/* Mon profil / CV */}
+          <div className="bg-gradient-to-br from-primary/5 to-secondary/5 rounded-2xl border border-primary/10 p-4">
+            <div className="flex items-center gap-2 mb-3">
               <span className="material-symbols-outlined text-primary text-lg" style={{ fontVariationSettings: "'FILL' 1" }}>tips_and_updates</span>
-              <span className="text-sm font-semibold text-primary">Conseil IA</span>
+              <span className="text-sm font-semibold text-primary">Votre profil</span>
             </div>
-            <p className="text-xs text-on-surface-variant leading-relaxed">
-              Complétez votre profil à 100% pour augmenter vos chances d'être contacté par les recruteurs de 3x.
-            </p>
-            <Link to="/etudiant/profil/1" className="mt-2 text-xs font-semibold text-primary hover:underline flex items-center gap-1">
-              Compléter mon profil
+            {profil?.competences?.length ? (
+              <>
+                <div className="flex flex-wrap gap-1.5 mb-3">
+                  {profil.competences.slice(0, 4).map((c) => (
+                    <span key={c} className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-lg">{c}</span>
+                  ))}
+                </div>
+                <p className="text-xs text-on-surface-variant leading-relaxed mb-2">
+                  Uploadez votre CV PDF pour activer le matching IA et être classé en tête chez les recruteurs.
+                </p>
+              </>
+            ) : (
+              <p className="text-xs text-on-surface-variant leading-relaxed mb-2">
+                Complétez votre profil et uploadez votre CV pour que l'IA vous recommande les meilleures offres.
+              </p>
+            )}
+            <Link to="/etudiant/profil/me" className="text-xs font-semibold text-primary hover:underline flex items-center gap-1">
+              Gérer mon profil
               <span className="material-symbols-outlined text-sm">arrow_forward</span>
             </Link>
           </div>
